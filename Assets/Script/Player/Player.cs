@@ -19,6 +19,12 @@ public class Player : MonoBehaviour
     private float dashCooldownTimer;
     private Vector3 dashDirection = Vector3.forward;
 
+    [Header("Carry System")]
+    [SerializeField] private Transform carrySocket;     
+    [SerializeField] private float carryRange = 2f;     
+    [SerializeField] private LayerMask collectibleLayer;
+    private ICollectible carriedItem;                   
+
     private CharacterController controller;
     private Transform camTransform; 
     private Vector3 velocity;
@@ -36,7 +42,6 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        
         isGrounded = controller.isGrounded;
 
         if (dashCooldownTimer > 0)
@@ -112,7 +117,6 @@ public class Player : MonoBehaviour
         }
         else
         {
-            
             if (velocity.y < 0)
             {
                 velocity.y += glideGravity * Time.deltaTime;
@@ -123,8 +127,27 @@ public class Player : MonoBehaviour
             }
         }
 
-        
         controller.Move(velocity * Time.deltaTime);
+
+        
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            if (carriedItem == null)
+            {
+                TryPickUpItem();
+            }
+            else
+            {
+                carriedItem.OnUse(this);
+            }
+        }
+
+        
+        if (Input.GetKeyDown(KeyCode.Q) && carriedItem != null)
+        {
+            carriedItem.OnDrop();
+            carriedItem = null;
+        }
     }
 
     public void Turn(Vector3 moveDirection)
@@ -160,7 +183,7 @@ public class Player : MonoBehaviour
             dashDirection = (forward * inputDir.z + right * inputDir.x).normalized;
         }
         else if (inputDir != Vector3.zero)
-      {
+        {
             dashDirection = inputDir;
         }
         else
@@ -177,5 +200,36 @@ public class Player : MonoBehaviour
         }
 
         Turn(dashDirection);
+    }
+
+    private void TryPickUpItem()
+{
+    
+    Collider[] hitColliders = Physics.OverlapSphere(transform.position, carryRange, collectibleLayer);
+    
+    if (hitColliders.Length > 0)
+    {
+        
+        foreach (var hitCollider in hitColliders)
+        {
+            ICollectible collectible = hitCollider.GetComponent<ICollectible>();
+            if (collectible != null)
+            {
+                carriedItem = collectible;
+                carriedItem.OnPickUp(carrySocket); 
+                Debug.Log("Picked up: " + hitCollider.name);
+                break;
+            }
+        }
+    }
+    else
+    {
+        Debug.Log("No collectible items nearby.");
+    }
+}
+
+    public void ClearCarriedItem()
+    {
+        carriedItem = null;
     }
 }
