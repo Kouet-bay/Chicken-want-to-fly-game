@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class CarryableObject : MonoBehaviour, ICollectible
+public class CarryableObject : Identity, ICollectible
 {
     private Rigidbody rb;
     private Collider col;
@@ -11,7 +11,6 @@ public class CarryableObject : MonoBehaviour, ICollectible
         col = GetComponent<Collider>();
     }
 
-    
     public void OnPickUp(Transform carrySocket)
     {
         if (rb != null)
@@ -31,14 +30,11 @@ public class CarryableObject : MonoBehaviour, ICollectible
     
     public void OnUse(Player player)
     {
-        Debug.Log("Using carried item to solve puzzle!");
+        Debug.Log($"{IdentityName} is being carried.");
         
-       
-        player.ClearCarriedItem();
-        Destroy(gameObject);
+        
     }
 
-    
     public void OnDrop()
     {
         transform.SetParent(null); 

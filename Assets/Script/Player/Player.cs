@@ -19,7 +19,7 @@ public class Player : MonoBehaviour
     private float dashCooldownTimer;
     private Vector3 dashDirection = Vector3.forward;
 
-    [Header("Carry System")]
+    [Header("Carry System & Interaction")]
     [SerializeField] private Transform carrySocket;     
     [SerializeField] private float carryRange = 2f;     
     [SerializeField] private LayerMask collectibleLayer;
@@ -100,7 +100,6 @@ public class Player : MonoBehaviour
             velocity.x = moveDir.x * movementSpeed;
             velocity.z = moveDir.z * movementSpeed;
 
-            
             if (Input.GetButtonDown("Jump") && isGrounded)
             {
                 Jump();
@@ -134,10 +133,16 @@ public class Player : MonoBehaviour
         {
             if (carriedItem == null)
             {
-                TryPickUpItem();
+                
+                if (!TryInteractWithObject())
+                {
+                    
+                    TryPickUpItem();
+                }
             }
             else
             {
+                
                 carriedItem.OnUse(this);
             }
         }
@@ -203,30 +208,40 @@ public class Player : MonoBehaviour
     }
 
     private void TryPickUpItem()
-{
-    
-    Collider[] hitColliders = Physics.OverlapSphere(transform.position, carryRange, collectibleLayer);
-    
-    if (hitColliders.Length > 0)
     {
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, carryRange, collectibleLayer);
         
-        foreach (var hitCollider in hitColliders)
+        if (hitColliders.Length > 0)
         {
-            ICollectible collectible = hitCollider.GetComponent<ICollectible>();
-            if (collectible != null)
+            foreach (var hitCollider in hitColliders)
             {
-                carriedItem = collectible;
-                carriedItem.OnPickUp(carrySocket); 
-                Debug.Log("Picked up: " + hitCollider.name);
-                break;
+                ICollectible collectible = hitCollider.GetComponent<ICollectible>();
+                if (collectible != null)
+                {
+                    carriedItem = collectible;
+                    carriedItem.OnPickUp(carrySocket); 
+                    Debug.Log("Picked up: " + hitCollider.name);
+                    break;
+                }
             }
         }
     }
-    else
+
+    private bool TryInteractWithObject()
     {
-        Debug.Log("No collectible items nearby.");
+        RaycastHit hit;
+        
+        if (Physics.Raycast(transform.position + transform.up * 0.8f, transform.forward, out hit, carryRange))
+        {
+            IInteractable interactable = hit.collider.GetComponent<IInteractable>();
+            if (interactable != null)
+            {
+                interactable.Use(this);
+                return true; 
+            }
+        }
+        return false;
     }
-}
 
     public void ClearCarriedItem()
     {
