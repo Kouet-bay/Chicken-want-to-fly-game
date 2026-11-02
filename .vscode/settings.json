@@ -60,13 +60,13 @@
         "*.asset": "yaml",
         "*.meta": "yaml",
         "*.prefab": "yaml",
-        "*.unity": "yaml",
+        "*.unity": "yaml"
     },
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "Chicken want to fly.slnx",
+    "dotnet.defaultSolution": "Chicken-want-to-fly-game.slnx",
     "dotnet.enableWorkspaceBasedDevelopment": false
 }
