@@ -34,22 +34,22 @@ public class Character : Identity, IDamageable
             Die(attacker);
         }
     }
+
     public virtual void Die(Character attacker)
     {
         // Handle character death (e.g., play animation, disable character, etc.)
-        if (attacker != null)
-        {
-            // Exp เป็นสถานะรวมของเกม (ความก้าวหน้าของผู้เล่น) จึงให้ GameManager ตัวเดียวเป็นคนเก็บและคำนวณเลเวลอัป
-            GameManager.Instance?.GainExperience(50); // Example: 50 experience points for defeating this character
-        }
+        // ตัดบรรทัด GainExperience ออกแล้ว เพราะเกมแนว Puzzle ไม่ได้ใช้ระบบ Exp
+        
         Debug.Log($"{IdentityName} has died.");
         this.enabled = false; // Disable the character's script to prevent further actions
-        Destroy(gameObject,3); // Remove the character from the scene after 3 seconds
+        Destroy(gameObject, 3); // Remove the character from the scene after 3 seconds
     }
+
     public virtual void Heal(int amount)
     {
         Hp = Mathf.Min(Hp + amount, MaxHp);
     }
+
     public virtual void Attack(IDamageable target)
     {
         if (target != null)

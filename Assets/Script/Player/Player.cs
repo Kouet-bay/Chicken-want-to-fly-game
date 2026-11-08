@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class Player : MonoBehaviour, IDamageable
 {
+    // ==========================================
+    // 1. HEALTH & LIVES (ระบบหัวใจและความเสียหาย)
+    // ==========================================
     [Header("Health Settings")]
     [SerializeField] private int maxHp = 100;
     private int hp;
@@ -13,6 +16,9 @@ public class Player : MonoBehaviour, IDamageable
         set => hp = Mathf.Clamp(value, 0, maxHp); 
     }
 
+    // ==========================================
+    // 2. MOVEMENT & GRAVITY (ระบบการเคลื่อนที่และแรงโน้มถ่วง)
+    // ==========================================
     [Header("Movement Settings")]
     [SerializeField] private float movementSpeed = 5f;
     [SerializeField] private float gravity = -20f;
@@ -21,30 +27,53 @@ public class Player : MonoBehaviour, IDamageable
     [Header("Glide Settings (Automatic Chicken Fall)")]
     [SerializeField] private float glideGravity = -3.0f; 
 
-    [Header("Dash Settings")]
+    // ==========================================
+    // 3. DASH & STAMINA (ระบบแดชและสตามิน่า)
+    // ==========================================
+    [Header("Dash & Stamina Settings")]
     [SerializeField] private float dashSpeed = 20f;
     [SerializeField] private float dashDuration = 0.2f;
     [SerializeField] private float dashCooldown = 1f;
+    [SerializeField] private float maxStamina = 100f;
+    [SerializeField] private float staminaCostPerDash = 25f; // พลังงานที่ใช้ต่อการ Dash 1 ครั้ง
+    [SerializeField] private float staminaRegenRate = 25f;   // อัตราการฟื้นฟูต่อวินาที
+    [SerializeField] private float staminaRegenDelay = 0.5f; // เวลารอก่อน Stamina จะเริ่มฟื้น
+    
+    private float currentStamina;
+    private float staminaRegenTimer = 0f;
     private bool isDashing = false;
     private float dashTimeLeft;
     private float dashCooldownTimer;
     private Vector3 dashDirection = Vector3.forward;
 
+    public float CurrentStamina => currentStamina;
+    public float MaxStamina => maxStamina;
+
+    // ==========================================
+    // 4. CARRY & INTERACTION (ระบบหยิบจับและปฏิสัมพันธ์)
+    // ==========================================
     [Header("Carry System & Interaction")]
     [SerializeField] private Transform carrySocket;    
     [SerializeField] private float carryRange = 2f;    
     [SerializeField] private LayerMask collectibleLayer;
     private ICollectible carriedItem;                
 
+    // ==========================================
+    // 5. COMPONENTS & REFERENCES (ตัวแปรอ้างอิงภายใน)
+    // ==========================================
     private CharacterController controller;
     private Transform camTransform; 
     private Vector3 velocity;
     private bool isGrounded;
 
+    // ==========================================
+    // UNITY LIFECYCLE METHODS
+    // ==========================================
     void Start()
     {
         controller = GetComponent<CharacterController>();
-        Hp = maxHp; // กำหนดเลือดเต็มตอนเริ่มเกม
+        Hp = maxHp; 
+        currentStamina = maxStamina; // เติม Stamina ให้เต็มตอนเริ่มเกม
         
         if (Camera.main != null)
         {
@@ -56,20 +85,33 @@ public class Player : MonoBehaviour, IDamageable
     {
         isGrounded = controller.isGrounded;
 
+        // จัดการคูลดาวน์ Dash
         if (dashCooldownTimer > 0)
         {
             dashCooldownTimer -= Time.deltaTime;
         }
+
+        HandleStaminaRegeneration();
+        UpdateUI();
         
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
         Vector3 inputDir = new Vector3(moveX, 0f, moveZ).normalized;
         
+        // เช็คการกดปุ่ม Dash (LeftShift)
         if (Input.GetKeyDown(KeyCode.LeftShift) && dashCooldownTimer <= 0 && !isDashing)
         {
-            StartDash(inputDir);
+            if (currentStamina >= staminaCostPerDash)
+            {
+                StartDash(inputDir);
+            }
+            else
+            {
+                Debug.Log("Stamina ไม่พอสำหรับการ Dash!");
+            }
         }
 
+        // ควบคุมการเคลื่อนที่ระหว่าง Dash หรือเดินปกติ
         if (isDashing)
         {
             velocity.x = dashDirection.x * dashSpeed;
@@ -83,39 +125,55 @@ public class Player : MonoBehaviour, IDamageable
         }
         else
         {
-            Vector3 moveDir = Vector3.zero;
-
-            if (inputDir != Vector3.zero)
-            {
-                if (camTransform != null)
-                {
-                    Vector3 forward = camTransform.forward;
-                    Vector3 right = camTransform.right;
-
-                    forward.y = 0f;
-                    right.y = 0f;
-                    forward.Normalize();
-                    right.Normalize();
-
-                    moveDir = (forward * inputDir.z + right * inputDir.x).normalized;
-                }
-                else
-                {
-                    moveDir = inputDir;
-                }
-
-                Turn(moveDir);
-            }
-
-            velocity.x = moveDir.x * movementSpeed;
-            velocity.z = moveDir.z * movementSpeed;
-
-            if (Input.GetButtonDown("Jump") && isGrounded)
-            {
-                Jump();
-            }
+            HandleNormalMovement(inputDir);
         }
         
+        HandleGravity();
+        controller.Move(velocity * Time.deltaTime);
+        
+        HandleInteractions();
+    }
+
+    // ==========================================
+    // MOVEMENT & ACTION METHODS
+    // ==========================================
+    private void HandleNormalMovement(Vector3 inputDir)
+    {
+        Vector3 moveDir = Vector3.zero;
+
+        if (inputDir != Vector3.zero)
+        {
+            if (camTransform != null)
+            {
+                Vector3 forward = camTransform.forward;
+                Vector3 right = camTransform.right;
+
+                forward.y = 0f;
+                right.y = 0f;
+                forward.Normalize();
+                right.Normalize();
+
+                moveDir = (forward * inputDir.z + right * inputDir.x).normalized;
+            }
+            else
+            {
+                moveDir = inputDir;
+            }
+
+            Turn(moveDir);
+        }
+
+        velocity.x = moveDir.x * movementSpeed;
+        velocity.z = moveDir.z * movementSpeed;
+
+        if (Input.GetButtonDown("Jump") && isGrounded)
+        {
+            Jump();
+        }
+    }
+
+    private void HandleGravity()
+    {
         if (isGrounded)
         {
             if (velocity.y < 0)
@@ -133,29 +191,6 @@ public class Player : MonoBehaviour, IDamageable
             {
                 velocity.y += gravity * Time.deltaTime;
             }
-        }
-
-        controller.Move(velocity * Time.deltaTime);
-        
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            if (carriedItem == null)
-            {
-                if (!TryInteractWithObject())
-                {
-                    TryPickUpItem();
-                }
-            }
-            else
-            {
-                carriedItem.OnUse(this);
-            }
-        }
-        
-        if (Input.GetKeyDown(KeyCode.Q) && carriedItem != null)
-        {
-            carriedItem.OnDrop();
-            carriedItem = null;
         }
     }
 
@@ -179,6 +214,11 @@ public class Player : MonoBehaviour, IDamageable
         isDashing = true;
         dashTimeLeft = dashDuration;
         dashCooldownTimer = dashCooldown;
+
+        // หักค่า Stamina ทันทีที่ Dash สำเร็จ และรีเซ็ตเวลาเริ่มฟื้นฟู
+        currentStamina -= staminaCostPerDash;
+        currentStamina = Mathf.Clamp(currentStamina, 0f, maxStamina);
+        staminaRegenTimer = 0f; 
 
         if (inputDir != Vector3.zero && camTransform != null)
         {
@@ -209,6 +249,59 @@ public class Player : MonoBehaviour, IDamageable
         }
 
         Turn(dashDirection);
+    }
+
+    // ==========================================
+    // STAMINA & UI METHODS
+    // ==========================================
+    private void HandleStaminaRegeneration()
+    {
+        if (!isDashing && currentStamina < maxStamina)
+        {
+            staminaRegenTimer += Time.deltaTime;
+            if (staminaRegenTimer >= staminaRegenDelay)
+            {
+                currentStamina += staminaRegenRate * Time.deltaTime;
+                currentStamina = Mathf.Clamp(currentStamina, 0f, maxStamina);
+            }
+        }
+    }
+
+    private void UpdateUI()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateStaminaUI(currentStamina, maxStamina);
+        }
+    }
+
+    // ==========================================
+    // INTERACTION & DAMAGE METHODS
+    // ==========================================
+    private void HandleInteractions()
+    {
+        // หยิบของ / ใช้งานไอเท็ม (E)
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            if (carriedItem == null)
+            {
+                if (!TryInteractWithObject())
+                {
+                    TryPickUpItem();
+                }
+            }
+            else
+            {
+                carriedItem.OnUse(this);
+            }
+        }
+        
+        // ปล่อยของที่ถือ (Q)
+        if (Input.GetKeyDown(KeyCode.Q) && carriedItem != null)
+        {
+            carriedItem.OnDrop();
+            carriedItem = null;
+        }
     }
 
     private void TryPickUpItem()
@@ -252,15 +345,14 @@ public class Player : MonoBehaviour, IDamageable
         carriedItem = null;
     }
 
-    // ฟังก์ชันรองรับระบบดาเมจและรีสปอน
+    // เมื่อโดนโจมตี จะส่งต่อไปหักหัวใจใน GameManager ทันที
     public void TakeDamage(int damage, Character attacker)
     {
-        Hp -= damage;
-        Debug.Log($"Player took {damage} damage! Remaining HP: {Hp}");
+        Debug.Log($"Player took damage from {attacker.name}! Losing 1 Heart.");
 
-        if (Hp <= 0)
+        if (GameManager.Instance != null)
         {
-            GameManager.Instance?.OnPlayerDeath();
+            GameManager.Instance.OnPlayerTakeDamage();
         }
     }
 
@@ -271,6 +363,7 @@ public class Player : MonoBehaviour, IDamageable
         controller.enabled = true;
 
         Hp = maxHp;
+        currentStamina = maxStamina; // รีเซ็ต Stamina ให้เต็มตอนเกิดใหม่
         velocity = Vector3.zero;
         Debug.Log("Player respawned at checkpoint.");
     }

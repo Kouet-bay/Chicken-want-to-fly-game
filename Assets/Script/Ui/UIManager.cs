@@ -1,14 +1,14 @@
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
+
     void Awake()
     {
-        if(Instance != null && Instance != this)
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
@@ -17,21 +17,14 @@ public class UIManager : MonoBehaviour
     }
 
     [Header("Health UI")]
-    [SerializeField] private Image healthFillImage; // ตั้ง Image Type = Filled ใน Inspector แล้วปรับ fillAmount (0-1) แทนการใช้ Slider
+    [SerializeField] private Image healthFillImage; 
     [SerializeField] private TMP_Text healthText;
 
-    [Header("Exp UI")]
-    [SerializeField] private Image expFillImage;
-    [SerializeField] private TMP_Text expText;
+    [Header("Life UI (3 Heart Icons)")]
+    [SerializeField] private GameObject[] heartIcons;
 
-    [Header("Level UI")]
-    [SerializeField] private TMP_Text levelText;
-
-    [Header("Gold UI")]
-    [SerializeField] private TMP_Text goldText;
-
-    [Header("Life UI")]
-    [SerializeField] private TMP_Text lifeText;
+    [Header("Stamina UI (Slider)")]
+    [SerializeField] private Slider staminaSlider; // เปลี่ยนจาก Image มาเป็น Slider แทนครับ
 
     [Header("End Game Panels")]
     [SerializeField] private GameObject winPanel;
@@ -49,45 +42,38 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    public void UpdateExpUI(int currentExp, int expToNextLevel)
-    {
-        if (expFillImage != null && expToNextLevel > 0)
-        {
-            expFillImage.fillAmount = (float)currentExp / expToNextLevel;
-        }
-        if (expText != null)
-        {
-            expText.text = $"{currentExp} / {expToNextLevel}";
-        }
-    }
-
-    public void UpdateLevelUI(int level)
-    {
-        if (levelText != null)
-        {
-            levelText.text = $"{level}";
-        }
-    }
-
-    public void UpdateGoldUI(int gold)
-    {
-        if (goldText != null)
-        {
-            goldText.text = $"{gold}";
-        }
-    }
-
     public void UpdateLifeUI(int life)
     {
-        if (lifeText != null)
+        for (int i = 0; i < heartIcons.Length; i++)
         {
-            lifeText.text = $"{life}";
+            if (heartIcons[i] != null)
+            {
+                if (i < life)
+                {
+                    heartIcons[i].SetActive(true);
+                }
+                else
+                {
+                    heartIcons[i].SetActive(false);
+                }
+            }
+        }
+    }
+
+    // ฟังก์ชันอัปเดตหลอด Stamina แบบ Slider
+    public void UpdateStaminaUI(float currentStamina, float maxStamina)
+    {
+        if (staminaSlider != null && maxStamina > 0)
+        {
+            // ตั้งค่า Min/Max ของ Slider ตามจริง และส่งค่าปัจจุบันเข้าไป
+            staminaSlider.maxValue = maxStamina;
+            staminaSlider.value = currentStamina;
         }
     }
 
     public void SetVisibleWinPanel(bool visible)
     {
-        if(winPanel != null)
+        if (winPanel != null)
         {
             winPanel.SetActive(visible);
         }
@@ -95,7 +81,7 @@ public class UIManager : MonoBehaviour
 
     public void SetVisibleLosePanel(bool visible)
     {
-        if(losePanel != null)
+        if (losePanel != null)
         {
             losePanel.SetActive(visible);
         }

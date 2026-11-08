@@ -4,24 +4,18 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class Enemy : Character
 {
-    // เลือกได้ทีละตัวว่าหลุดระยะมองเห็นแล้วจะกลับไปยืนเฉยๆ ที่จุดเกิด หรือเดิน patrol ต่อ
     public enum LostSightBehavior { StandStill, Patrol }
 
     [SerializeField] private string enemyType;
-    [SerializeField] private int experienceReward = 100;
 
-    [Header("Loot — สุ่มจำนวน Gold ที่ดรอปตอนตายในช่วง min-max")]
-    [SerializeField] private int minGoldDrop = 5;
-    [SerializeField] private int maxGoldDrop = 15;
-
-    [Header("AI Settings — ปรับต่างกันได้ทีละ Enemy/ทีละ prefab")]
+    [Header("AI Settings")]
     [SerializeField] private float visionRange = 6f;
     [SerializeField] private float attackRange = 1.5f;
     [SerializeField] private float attackCooldown = 1.5f;
 
     [Header("Lost Sight Behavior")]
     [SerializeField] private LostSightBehavior lostSightBehavior = LostSightBehavior.StandStill;
-    [SerializeField] private Transform[] patrolPoints; // ใช้เฉพาะตอนเลือก Patrol
+    [SerializeField] private Transform[] patrolPoints;
 
     private NavMeshAgent agent;
     private Animator animator;
@@ -41,12 +35,6 @@ public class Enemy : Character
     {
         get { return enemyType; }
         private set { enemyType = value; }
-    }
-
-    public int ExperienceReward
-    {
-        get { return experienceReward; }
-        private set { experienceReward = value; }
     }
 
     private void Awake()
@@ -74,19 +62,16 @@ public class Enemy : Character
         currentState.Enter();
     }
 
-    // ตอนเริ่มเกม: StandStill เริ่มยืนเฉยที่จุดเกิด, Patrol เริ่มเดินตามจุด patrol เลย
     private EnemyState CreateInitialState()
     {
         return lostSightBehavior == LostSightBehavior.Patrol ? new PatrolState(this) : new IdleState(this);
     }
 
-    // ตอนหลุดระยะมองเห็นระหว่างไล่ล่า: StandStill เดินกลับจุดเกิดก่อนค่อยยืนเฉย, Patrol กลับไปเดิน patrol ต่อทันที
     public EnemyState CreateLostSightState()
     {
         return lostSightBehavior == LostSightBehavior.Patrol ? new PatrolState(this) : new ReturnState(this);
     }
 
-    // ให้แต่ละ state สั่งอนิเมชันตามที่ทำอยู่ (0 = idle, 1 = walk) ไม่ผูกกับ state ใด state หนึ่งโดยเฉพาะ
     public void SetMovementState(int state)
     {
         if (animator != null)
@@ -95,8 +80,6 @@ public class Enemy : Character
         }
     }
 
-    // จุดต่อยอดสำหรับอนาคต: Enemy พันธุ์โจมตีระยะไกลแค่ override เมธอดนี้ตัวเดียว
-    // (เช่น ยิงกระสุนแทนการโจมตีประชิด) โดยไม่ต้องแตะ AttackState เลย
     public virtual void PerformAttack()
     {
         if (player.Hp <= 0)
@@ -137,24 +120,21 @@ public class Enemy : Character
 
     public override void Die(Character attacker)
     {
-        if (attacker != null)
-        {
-            GameManager.Instance?.GainExperience(ExperienceReward);
-
-            int goldDropped = Random.Range(minGoldDrop, maxGoldDrop + 1); // Random.Range(int,int) ไม่รวมค่า max จึง +1
-            GameManager.Instance?.AddGold(goldDropped);
-            Debug.Log($"{EnemyType} dropped {goldDropped} gold!");
-        }
         Debug.Log($"{EnemyType} has been defeated!");
         SetMovementState(-1);
-        agent.isStopped = true;
+        if (agent != null)
+        {
+            agent.isStopped = true;
+        }
+
         Collider[] colliders = GetComponentsInChildren<Collider>();
-        this.enabled = false; // Disable the enemy's script to prevent further actions
+        this.enabled = false; 
+        
         foreach (Collider collider in colliders)
         {
             collider.enabled = false;
         }
-        Destroy(gameObject, 3); // Remove the enemy from the scene after 3 seconds
+        Destroy(gameObject, 3f);
     }
 
     private void OnDrawGizmosSelected()
@@ -165,7 +145,6 @@ public class Enemy : Character
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
 
-        // ก่อนกด Play ยังไม่มี spawnPosition (ตั้งค่าจริงใน Awake) ใช้ตำแหน่งปัจจุบันแทนไปก่อน
         Vector3 origin = Application.isPlaying ? spawnPosition : transform.position;
 
         if (lostSightBehavior == LostSightBehavior.StandStill)
