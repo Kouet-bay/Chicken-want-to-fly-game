@@ -1,7 +1,18 @@
 using UnityEngine;
 
-public class Player : MonoBehaviour
+public class Player : MonoBehaviour, IDamageable
 {
+    [Header("Health Settings")]
+    [SerializeField] private int maxHp = 100;
+    private int hp;
+
+    public int MaxHp => maxHp;
+    public int Hp 
+    { 
+        get => hp; 
+        set => hp = Mathf.Clamp(value, 0, maxHp); 
+    }
+
     [Header("Movement Settings")]
     [SerializeField] private float movementSpeed = 5f;
     [SerializeField] private float gravity = -20f;
@@ -20,10 +31,10 @@ public class Player : MonoBehaviour
     private Vector3 dashDirection = Vector3.forward;
 
     [Header("Carry System & Interaction")]
-    [SerializeField] private Transform carrySocket;     
-    [SerializeField] private float carryRange = 2f;     
+    [SerializeField] private Transform carrySocket;    
+    [SerializeField] private float carryRange = 2f;    
     [SerializeField] private LayerMask collectibleLayer;
-    private ICollectible carriedItem;                   
+    private ICollectible carriedItem;                
 
     private CharacterController controller;
     private Transform camTransform; 
@@ -33,6 +44,7 @@ public class Player : MonoBehaviour
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        Hp = maxHp; // กำหนดเลือดเต็มตอนเริ่มเกม
         
         if (Camera.main != null)
         {
@@ -48,12 +60,10 @@ public class Player : MonoBehaviour
         {
             dashCooldownTimer -= Time.deltaTime;
         }
-
         
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
         Vector3 inputDir = new Vector3(moveX, 0f, moveZ).normalized;
-
         
         if (Input.GetKeyDown(KeyCode.LeftShift) && dashCooldownTimer <= 0 && !isDashing)
         {
@@ -105,7 +115,6 @@ public class Player : MonoBehaviour
                 Jump();
             }
         }
-
         
         if (isGrounded)
         {
@@ -127,26 +136,21 @@ public class Player : MonoBehaviour
         }
 
         controller.Move(velocity * Time.deltaTime);
-
         
         if (Input.GetKeyDown(KeyCode.E))
         {
             if (carriedItem == null)
             {
-                
                 if (!TryInteractWithObject())
                 {
-                    
                     TryPickUpItem();
                 }
             }
             else
             {
-                
                 carriedItem.OnUse(this);
             }
         }
-
         
         if (Input.GetKeyDown(KeyCode.Q) && carriedItem != null)
         {
@@ -246,5 +250,28 @@ public class Player : MonoBehaviour
     public void ClearCarriedItem()
     {
         carriedItem = null;
+    }
+
+    // ฟังก์ชันรองรับระบบดาเมจและรีสปอน
+    public void TakeDamage(int damage, Character attacker)
+    {
+        Hp -= damage;
+        Debug.Log($"Player took {damage} damage! Remaining HP: {Hp}");
+
+        if (Hp <= 0)
+        {
+            GameManager.Instance?.OnPlayerDeath();
+        }
+    }
+
+    public void RespawnAt(Vector3 checkpointPos)
+    {
+        controller.enabled = false;
+        transform.position = checkpointPos;
+        controller.enabled = true;
+
+        Hp = maxHp;
+        velocity = Vector3.zero;
+        Debug.Log("Player respawned at checkpoint.");
     }
 }
