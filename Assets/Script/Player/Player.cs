@@ -16,6 +16,11 @@ public class Player : MonoBehaviour, IDamageable
         set => hp = Mathf.Clamp(value, 0, maxHp); 
     }
 
+    [Header("Damage Cooldown / Invulnerability")]
+    [SerializeField] private float invulnerabilityDuration = 0.5f; // เวลาอมตะหลังโดนตี (วินาที)เพื่อป้องกันโดนตีซ้ำรัวๆ
+    private float invulnerabilityTimer = 0f;
+    private bool isInvulnerable = false;
+
     // ==========================================
     // 2. MOVEMENT & GRAVITY (ระบบการเคลื่อนที่และแรงโน้มถ่วง)
     // ==========================================
@@ -35,9 +40,9 @@ public class Player : MonoBehaviour, IDamageable
     [SerializeField] private float dashDuration = 0.2f;
     [SerializeField] private float dashCooldown = 1f;
     [SerializeField] private float maxStamina = 100f;
-    [SerializeField] private float staminaCostPerDash = 25f; // พลังงานที่ใช้ต่อการ Dash 1 ครั้ง
-    [SerializeField] private float staminaRegenRate = 25f;   // อัตราการฟื้นฟูต่อวินาที
-    [SerializeField] private float staminaRegenDelay = 0.5f; // เวลารอก่อน Stamina จะเริ่มฟื้น
+    [SerializeField] private float staminaCostPerDash = 25f; 
+    [SerializeField] private float staminaRegenRate = 25f;   
+    [SerializeField] private float staminaRegenDelay = 0.5f; 
     
     private float currentStamina;
     private float staminaRegenTimer = 0f;
@@ -73,7 +78,7 @@ public class Player : MonoBehaviour, IDamageable
     {
         controller = GetComponent<CharacterController>();
         Hp = maxHp; 
-        currentStamina = maxStamina; // เติม Stamina ให้เต็มตอนเริ่มเกม
+        currentStamina = maxStamina; 
         
         if (Camera.main != null)
         {
@@ -89,6 +94,16 @@ public class Player : MonoBehaviour, IDamageable
         if (dashCooldownTimer > 0)
         {
             dashCooldownTimer -= Time.deltaTime;
+        }
+
+        // จัดการเวลาอมตะหลังโดนตี
+        if (isInvulnerable)
+        {
+            invulnerabilityTimer -= Time.deltaTime;
+            if (invulnerabilityTimer <= 0f)
+            {
+                isInvulnerable = false;
+            }
         }
 
         HandleStaminaRegeneration();
@@ -215,7 +230,6 @@ public class Player : MonoBehaviour, IDamageable
         dashTimeLeft = dashDuration;
         dashCooldownTimer = dashCooldown;
 
-        // หักค่า Stamina ทันทีที่ Dash สำเร็จ และรีเซ็ตเวลาเริ่มฟื้นฟู
         currentStamina -= staminaCostPerDash;
         currentStamina = Mathf.Clamp(currentStamina, 0f, maxStamina);
         staminaRegenTimer = 0f; 
@@ -280,7 +294,6 @@ public class Player : MonoBehaviour, IDamageable
     // ==========================================
     private void HandleInteractions()
     {
-        // หยิบของ / ใช้งานไอเท็ม (E)
         if (Input.GetKeyDown(KeyCode.E))
         {
             if (carriedItem == null)
@@ -296,7 +309,6 @@ public class Player : MonoBehaviour, IDamageable
             }
         }
         
-        // ปล่อยของที่ถือ (Q)
         if (Input.GetKeyDown(KeyCode.Q) && carriedItem != null)
         {
             carriedItem.OnDrop();
@@ -345,9 +357,14 @@ public class Player : MonoBehaviour, IDamageable
         carriedItem = null;
     }
 
-    // เมื่อโดนโจมตี จะส่งต่อไปหักหัวใจใน GameManager ทันที
+    // ระบบรับดาเมจ: ป้องกันการโดนตีซ้ำซ้อนด้วยระบบอมตะชั่วขณะ
     public void TakeDamage(int damage, Character attacker)
     {
+        if (isInvulnerable) return; // ถ้ากำลังอมตะอยู่จะไม่โดนหักหัวใจซ้ำ
+
+        isInvulnerable = true;
+        invulnerabilityTimer = invulnerabilityDuration;
+
         Debug.Log($"Player took damage from {attacker.name}! Losing 1 Heart.");
 
         if (GameManager.Instance != null)
@@ -363,8 +380,13 @@ public class Player : MonoBehaviour, IDamageable
         controller.enabled = true;
 
         Hp = maxHp;
-        currentStamina = maxStamina; // รีเซ็ต Stamina ให้เต็มตอนเกิดใหม่
+        currentStamina = maxStamina; 
         velocity = Vector3.zero;
+        
+        // รีเซ็ตสถานะอมตะตอนเกิดใหม่เพื่อให้พร้อมรับการเล่นต่อ
+        isInvulnerable = false;
+        invulnerabilityTimer = 0f;
+
         Debug.Log("Player respawned at checkpoint.");
     }
 }

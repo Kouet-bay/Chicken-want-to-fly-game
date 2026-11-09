@@ -1,20 +1,25 @@
-using System.Collections;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    // ==========================================
+    // 1. PLAYER LIVES & CHECKPOINT SETTINGS
+    // ==========================================
     [Header("Player Lives & Checkpoint")]
-    [SerializeField] private int startLive = 3;
+    [SerializeField] private int startLives = 3;
     private int life;
     public int Life => life;
 
-    [SerializeField] private float respawnDelay = 2f;
     private Vector3 checkPoint;
 
+    [Header("References")]
     public Player player;
 
+    // ==========================================
+    // UNITY LIFECYCLE METHODS
+    // ==========================================
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -27,72 +32,66 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        life = startLive;
+        life = startLives;
         player = FindAnyObjectByType<Player>();
         
+        // กำหนดจุดเกิดเริ่มต้นที่ตำแหน่งตัวละครตอนเริ่มเกม
         if (player != null)
         {
             checkPoint = player.transform.position;
         }
 
         // อัปเดต UI ชีวิตเริ่มต้น
-        if (UIManager.Instance != null)
-        {
-            UIManager.Instance.UpdateLifeUI(life);
-        }
+        UpdateLifeUI();
     }
 
+    // ==========================================
+    // CHECKPOINT & RESPAWN METHODS
+    // ==========================================
     public void SetCheckPoint(Vector3 pos)
     {
         checkPoint = pos;
-        Debug.Log("Checkpoint Updated: " + pos);
+        Debug.Log("Checkpoint Updated at: " + pos);
     }
 
-    // ฟังก์ชันใหม่สำหรับหักหัวใจเมื่อ Player โดนตี
+    // ฟังก์ชันจัดการเมื่อ Player โดนโจมตี (หักหัวใจ และพากลับ Checkpoint ทันที)
     public void OnPlayerTakeDamage()
     {
         life--;
         life = Mathf.Max(life, 0);
 
-        if (UIManager.Instance != null)
-        {
-            UIManager.Instance.UpdateLifeUI(life);
-        }
+        UpdateLifeUI();
 
         if (life <= 0)
         {
-            // Game Over!! หัวใจหมด
+            // Game Over: หัวใจหมดเกลี้ยง
             if (UIManager.Instance != null)
             {
                 UIManager.Instance.SetVisibleLosePanel(true);
             }
             SetEnablePlayer(false);
+            Debug.Log("Game Over! Out of lives.");
         }
         else
         {
-            // Respawn กลับจุด Checkpoint ทันทีเมื่อเสียหัวใจไป 1 ดวง
-            StartCoroutine(Respawn());
+            // เสียหัวใจ 1 ดวง: วาร์ปกลับจุด Checkpoint ทันทีแบบไม่มีดีเลย์!
+            RespawnInstantly();
         }
     }
 
-    public void OnPlayerDeath()
+    // ฟังก์ชันวาร์ปกลับจุดเกิดทันทีในเฟรมเดียวกัน
+    private void RespawnInstantly()
     {
-        // เผื่อกรณีตายทันทีจากเคสอื่น
-        OnPlayerTakeDamage();
-    }
-
-    private IEnumerator Respawn()
-    {
-        SetEnablePlayer(false); // ปิดการควบคุมระหว่างรอเกิด
-        yield return new WaitForSeconds(respawnDelay);
-
         if (player != null)
         {
             player.RespawnAt(checkPoint);
-            SetEnablePlayer(true);
+            Debug.Log("Player respawned instantly at checkpoint!");
         }
     }
 
+    // ==========================================
+    // UTILITY METHODS
+    // ==========================================
     public void SetEnablePlayer(bool enable)
     {
         if (player != null)
@@ -101,9 +100,16 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void UpdateLifeUI()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateLifeUI(life);
+        }
+    }
+
     public void OnEnterWinZone()
     {
-        // Win Condition
         SetEnablePlayer(false);
         if (UIManager.Instance != null)
         {

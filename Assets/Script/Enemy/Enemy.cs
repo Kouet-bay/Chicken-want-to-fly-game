@@ -6,6 +6,7 @@ public class Enemy : Character
 {
     public enum LostSightBehavior { StandStill, Patrol }
 
+    [Header("Enemy Identity")]
     [SerializeField] private string enemyType;
 
     [Header("AI Settings")]
@@ -17,12 +18,14 @@ public class Enemy : Character
     [SerializeField] private LostSightBehavior lostSightBehavior = LostSightBehavior.StandStill;
     [SerializeField] private Transform[] patrolPoints;
 
+    // Components & References
     private NavMeshAgent agent;
     private Animator animator;
     private Player player;
     private Vector3 spawnPosition;
     private EnemyState currentState;
 
+    // Public Getters
     public NavMeshAgent Agent => agent;
     public Player Player => player;
     public Vector3 SpawnPosition => spawnPosition;
@@ -33,10 +36,13 @@ public class Enemy : Character
 
     public string EnemyType
     {
-        get { return enemyType; }
-        private set { enemyType = value; }
+        get => enemyType;
+        private set => enemyType = value;
     }
 
+    // ==========================================
+    // UNITY LIFECYCLE METHODS
+    // ==========================================
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -53,13 +59,22 @@ public class Enemy : Character
 
     private void Update()
     {
-        currentState.Tick(Time.deltaTime);
+        if (currentState != null)
+        {
+            currentState.Tick(Time.deltaTime);
+        }
     }
 
+    // ==========================================
+    // STATE MACHINE METHODS
+    // ==========================================
     public void TransitionTo(EnemyState newState)
     {
         currentState = newState;
-        currentState.Enter();
+        if (currentState != null)
+        {
+            currentState.Enter();
+        }
     }
 
     private EnemyState CreateInitialState()
@@ -80,20 +95,25 @@ public class Enemy : Character
         }
     }
 
+    // ==========================================
+    // COMBAT & DAMAGE METHODS
+    // ==========================================
     public virtual void PerformAttack()
     {
-        if (player.Hp <= 0)
+        if (player != null && player.Hp <= 0)
         {
-            if(currentState != CreateLostSightState())
+            if (currentState != CreateLostSightState())
             {
                 TransitionTo(CreateLostSightState());
             }
             return;
         }
+
         if (animator != null)
         {
             animator.SetTrigger("Attack");
         }
+
         Attack(player);
     }
 
@@ -112,6 +132,7 @@ public class Enemy : Character
         int effectiveDamage = Mathf.Max(damage - defensePoints, 0);
         Hp -= effectiveDamage;
         Debug.Log($"{EnemyType} takes {effectiveDamage} damage! Remaining HP: {Hp}");
+
         if (Hp <= 0)
         {
             Die(attacker);
@@ -122,7 +143,8 @@ public class Enemy : Character
     {
         Debug.Log($"{EnemyType} has been defeated!");
         SetMovementState(-1);
-        if (agent != null)
+
+        if (agent != null && agent.isOnNavMesh)
         {
             agent.isStopped = true;
         }
@@ -130,13 +152,17 @@ public class Enemy : Character
         Collider[] colliders = GetComponentsInChildren<Collider>();
         this.enabled = false; 
         
-        foreach (Collider collider in colliders)
+        foreach (Collider col in colliders)
         {
-            collider.enabled = false;
+            col.enabled = false;
         }
+
         Destroy(gameObject, 3f);
     }
 
+    // ==========================================
+    // GIZMOS (DEBUG VISUALIZATION)
+    // ==========================================
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
