@@ -7,38 +7,29 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private Slider bgmSlider;
     [SerializeField] private Slider sfxSlider;
 
+    [Header("Gameplay Sliders")]
+    [SerializeField] private Slider mouseSensitivitySlider;
+
     void Start()
     {
-        // ดึงค่าเสียงปัจจุบันมาแสดงที่ Slider เมื่อเปิดหน้า Setting
-        if (AudioManager.Instance != null)
+        // 1. โหลดค่าความไวเมาส์ที่เคยบันทึกไว้มาแสดงที่ Slider (ถ้าไม่มี ใช้ 1.0)
+        if (mouseSensitivitySlider != null)
         {
-            if (bgmSlider != null)
-            {
-                bgmSlider.value = AudioManager.Instance.GetBGMVolume();
-                bgmSlider.onValueChanged.AddListener(OnBGMVolumeChanged);
-            }
-
-            if (sfxSlider != null)
-            {
-                sfxSlider.value = AudioManager.Instance.GetSFXVolume();
-                sfxSlider.onValueChanged.AddListener(OnSFXVolumeChanged);
-            }
+            float savedSens = PlayerPrefs.GetFloat("MouseSensitivity", 1.0f);
+            mouseSensitivitySlider.value = savedSens;
+            
+            // ผูกฟังก์ชันเมื่อมีการเลื่อน Slider
+            mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivityChanged);
         }
     }
 
-    private void OnBGMVolumeChanged(float value)
+    // ฟังก์ชันนี้จะทำงานทันทีที่มีการเลื่อน Slider
+    private void OnMouseSensitivityChanged(float value)
     {
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.SetBGMVolume(value);
-        }
-    }
+        // บันทึกค่าลงใน PlayerPrefs ทันที
+        PlayerPrefs.SetFloat("MouseSensitivity", value);
+        PlayerPrefs.Save(); // สั่งบันทึกไฟล์ลงเครื่องชัวร์ๆ
 
-    private void OnSFXVolumeChanged(float value)
-    {
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.SetSFXVolume(value);
-        }
+        Debug.Log("🎚️ บันทึกค่าความไวเมาส์ใหม่ลงระบบ: " + value);
     }
 }
