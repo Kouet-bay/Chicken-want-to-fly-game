@@ -4,18 +4,28 @@ using UnityEngine.SceneManagement;
 public class PauseManager : MonoBehaviour
 {
     [Header("UI References")]
-    [SerializeField] private GameObject pauseMenuUI; // ลาก Panel Pause Menu มาใส่ที่นี่
+    [SerializeField] private GameObject pauseMenuUI; // Panel หลักทั้งหมดของเมนู Pause
+    [SerializeField] private GameObject settingsUi;  // Panel สำหรับหน้า Settings
 
     private bool isPaused = false;
 
-    void Update()
+    private void Update()
     {
         // เมื่อผู้เล่นกดปุ่ม Esc จะสลับสถานะ Pause / Unpause
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (isPaused)
             {
-                ResumeGame();
+                // ถ้าเปิดหน้า Setting อยู่ ให้กด Esc เพื่อปิด Setting กลับมาหน้าเมนูหลักก่อน
+                if (settingsUi != null && settingsUi.activeSelf)
+                {
+                    CloseSettings();
+                }
+                else
+                {
+                    // ถ้าอยู่หน้าเมนูหลัก ให้กด Esc เพื่อกลับเข้าเกม
+                    ResumeGame();
+                }
             }
             else
             {
@@ -24,32 +34,70 @@ public class PauseManager : MonoBehaviour
         }
     }
 
-    public void ResumeGame()
+    public void PauseGame()
     {
-        pauseMenuUI.SetActive(false); // ซ่อน UI หน้า Pause
-        Time.timeScale = 1f;          // คืนค่าเวลาเกมให้เดินปกติ (1 = ปกติ)
-        isPaused = false;
+        if (pauseMenuUI != null) 
+        {
+            pauseMenuUI.SetActive(true);
+        }
 
-        // ปลดล็อกและแสดงเมาส์กลับไปเป็นโหมดเล่นเกม (ถ้าเกมใช้เมาส์หมุนมุมกล้อง)
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-    }
+        // ตอนกด Pause ให้เปิดเมนูหลัก แต่ซ่อนหน้า Setting ไว้ก่อน
+        if (settingsUi != null)
+        {
+            settingsUi.SetActive(false);
+        }
 
-    void PauseGame()
-    {
-        pauseMenuUI.SetActive(true);  // แสดง UI หน้า Pause
-        Time.timeScale = 0f;          // หยุดเวลาในเกมทั้งหมด (0 = หยุดนิ่ง)
+        Time.timeScale = 0f; // หยุดเวลาในเกม
         isPaused = true;
 
-        // ปลดล็อกเมาส์เพื่อให้ผู้เล่นเอามาคลิกปุ่มในเมนูได้
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
 
-    // ฟังก์ชันสำหรับผูกกับปุ่ม Quit หรือกลับหน้าเมนูหลัก
+    public void ResumeGame()
+    {
+        if (pauseMenuUI != null) 
+        {
+            pauseMenuUI.SetActive(false);
+        }
+
+        if (settingsUi != null)
+        {
+            settingsUi.SetActive(false);
+        }
+
+        Time.timeScale = 1f; // กลับมาเดินเวลาปกติ
+        isPaused = false;     // รีเซ็ตสถานะเพื่อให้กด Esc เปิดใหม่ได้
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+    
+    // ==========================================
+    // SETTINGS NAVIGATION
+    // ==========================================
+    public void OpenSettings()
+    {
+        if (settingsUi != null)
+        {
+            settingsUi.SetActive(true);
+        }
+    }
+
+    public void CloseSettings()
+    {
+        if (settingsUi != null)
+        {
+            settingsUi.SetActive(false); // ปิดแค่หน้า Setting ให้กลับมาเห็นหน้าเมนูหลัก
+        }
+    }
+
+    // ==========================================
+    // UTILITY METHODS
+    // ==========================================
     public void QuitToMainMenu(string menuSceneName)
     {
-        Time.timeScale = 1f; // ต้องคืนค่าเวลาก่อนเปลี่ยนฉากเสมอ ไม่งั้นฉากใหม่จะค้าง
+        Time.timeScale = 1f;
         SceneManager.LoadScene(menuSceneName);
     }
 }
