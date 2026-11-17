@@ -136,8 +136,8 @@ public class GameManager : MonoBehaviour
         isPaused = false;
 
         // ซ่อนและล็อกเมาส์กลับสำหรับควบคุมมุมกล้อง 3D
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        //Cursor.lockState = CursorLockMode.Locked;
+        //Cursor.visible = false;
     }
 
     public void PauseGame()
