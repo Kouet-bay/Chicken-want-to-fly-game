@@ -8,34 +8,40 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private Slider sfxSlider;
 
     [Header("Mouse Sensitivity Slider")]
-    [SerializeField] private Slider mouseSensitivitySlider; // เพิ่ม Slider ความไวเมาส์
+    [SerializeField] private Slider mouseSensitivitySlider;
 
     void Start()
     {
-        // 1. จัดการเรื่องเสียง
+        // 1. จัดการเรื่องเสียง (ดึงค่าปัจจุบันจาก AudioManager ที่จำค่าไว้แล้ว)
         if (AudioManager.Instance != null)
         {
             if (bgmSlider != null)
             {
-                bgmSlider.value = AudioManager.Instance.GetBGMVolume();
+                float currentBgm = AudioManager.Instance.GetBGMVolume();
+                bgmSlider.SetValueWithoutNotify(currentBgm);
+                bgmSlider.onValueChanged.RemoveAllListeners();
                 bgmSlider.onValueChanged.AddListener(OnBGMVolumeChanged);
             }
 
             if (sfxSlider != null)
             {
-                sfxSlider.value = AudioManager.Instance.GetSFXVolume();
+                float currentSfx = AudioManager.Instance.GetSFXVolume();
+                sfxSlider.SetValueWithoutNotify(currentSfx);
+                sfxSlider.onValueChanged.RemoveAllListeners();
                 sfxSlider.onValueChanged.AddListener(OnSFXVolumeChanged);
             }
+        }
+        else
+        {
+            Debug.LogWarning("SettingsMenu: AudioManager.Instance is null!");
         }
 
         // 2. จัดการเรื่องความไวเมาส์ (ดึงค่าที่เคยเซฟไว้มาแสดง)
         if (mouseSensitivitySlider != null)
         {
-            // โหลดค่าความไวเมาส์เดิม (ถ้ายังไม่เคยปรับ ให้ค่าเริ่มต้นเป็น 2.0 หรือตามที่คุณใช้)
             float savedSensitivity = PlayerPrefs.GetFloat("MouseSensitivity", 2.0f);
-            mouseSensitivitySlider.value = savedSensitivity;
-            
-            // ผูก Event เมื่อเลื่อนสไลเดอร์
+            mouseSensitivitySlider.SetValueWithoutNotify(savedSensitivity);
+            mouseSensitivitySlider.onValueChanged.RemoveAllListeners();
             mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivityChanged);
         }
     }
@@ -56,13 +62,11 @@ public class SettingsMenu : MonoBehaviour
         }
     }
 
-    // ฟังก์ชันบันทึกค่าความไวเมาส์ลง PlayerPrefs ทันทีที่เลื่อน
     private void OnMouseSensitivityChanged(float value)
     {
         PlayerPrefs.SetFloat("MouseSensitivity", value);
-        PlayerPrefs.Save(); // บันทึกข้อมูลลงหน่วยความจำเครื่องทันที
-        
-        // (ถ้ามีสคริปต์ควบคุมมุมมองกล้องในหน้า Main Menu สามารถอัปเดตตรงนี้ได้ทันที)
+        PlayerPrefs.Save();
+
         Debug.Log("Mouse Sensitivity Updated: " + value);
     }
 }

@@ -8,6 +8,15 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioSource bgmSource;
     [SerializeField] private AudioSource sfxSource;
 
+    [Header("Optional Default BGM")]
+    [SerializeField] private AudioClip defaultBgmClip;
+
+    private const string BGM_KEY = "BGMVolume";
+    private const string SFX_KEY = "SFXVolume";
+
+    private float bgmVolume = 0.75f;
+    private float sfxVolume = 0.75f;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -18,49 +27,78 @@ public class AudioManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        bgmVolume = PlayerPrefs.GetFloat(BGM_KEY, 0.75f);
+        sfxVolume = PlayerPrefs.GetFloat(SFX_KEY, 0.75f);
+        ApplyVolumes();
     }
 
-    public void PlayBGM(AudioClip clip)
+    private void Start()
     {
-        if (clip == null) return;
-        if (bgmSource.clip == clip && bgmSource.isPlaying) return;
+        if (defaultBgmClip != null)
+        {
+            PlayBGM(defaultBgmClip, forceRestart: false);
+        }
+    }
 
+    /// <summary>
+    /// เล่นเพลง BGM โดยกันเพลงซ้อน และเลือกได้ว่าจะให้เริ่มใหม่ตั้งแต่ต้น (forceRestart = true) หรือไม่
+    /// </summary>
+    public void PlayBGM(AudioClip clip, bool forceRestart = false)
+    {
+        if (clip == null || bgmSource == null) return;
+
+        if (!forceRestart && bgmSource.clip == clip && bgmSource.isPlaying)
+        {
+            return;
+        }
+
+        bgmSource.Stop();
         bgmSource.clip = clip;
+        bgmSource.time = 0f;
         bgmSource.loop = true;
+        ApplyVolumes();
         bgmSource.Play();
+    }
+
+    public void StopBGM()
+    {
+        if (bgmSource != null)
+        {
+            bgmSource.Stop();
+            bgmSource.clip = null;
+        }
     }
 
     public void PlaySFX(AudioClip clip)
     {
-        if (clip == null) return;
+        if (clip == null || sfxSource == null) return;
+        ApplyVolumes();
         sfxSource.PlayOneShot(clip);
     }
 
-    // แยกปรับเสียง BGM
-    public void SetBGMVolume(float volume)
+    public float GetBGMVolume() => bgmVolume;
+    public float GetSFXVolume() => sfxVolume;
+
+    public void SetBGMVolume(float value)
     {
-        if (bgmSource != null)
-        {
-            bgmSource.volume = volume;
-        }
+        bgmVolume = Mathf.Clamp01(value);
+        PlayerPrefs.SetFloat(BGM_KEY, bgmVolume);
+        PlayerPrefs.Save();
+        ApplyVolumes();
     }
 
-    // แยกปรับเสียง SFX
-    public void SetSFXVolume(float volume)
+    public void SetSFXVolume(float value)
     {
-        if (sfxSource != null)
-        {
-            sfxSource.volume = volume;
-        }
+        sfxVolume = Mathf.Clamp01(value);
+        PlayerPrefs.SetFloat(SFX_KEY, sfxVolume);
+        PlayerPrefs.Save();
+        ApplyVolumes();
     }
 
-    public float GetBGMVolume()
+    public void ApplyVolumes()
     {
-        return bgmSource != null ? bgmSource.volume : 1f;
-    }
-
-    public float GetSFXVolume()
-    {
-        return sfxSource != null ? sfxSource.volume : 1f;
+        if (bgmSource != null) bgmSource.volume = bgmVolume;
+        if (sfxSource != null) sfxSource.volume = sfxVolume;
     }
 }
