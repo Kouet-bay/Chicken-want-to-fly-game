@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Audio;
 using UnityEngine.UI;
 
 public class SettingsManager : MonoBehaviour
@@ -9,110 +8,84 @@ public class SettingsManager : MonoBehaviour
     [SerializeField] private Slider sfxSlider;
     [SerializeField] private Slider mouseSensitivitySlider;
 
-    [Header("Audio Mixer (แนะนำให้ใช้)")]
-    [SerializeField] private AudioMixer audioMixer;
-    [SerializeField] private string musicParameter = "MusicVolume"; // ตรงกับ Exposed Parameter ใน AudioMixer
-    [SerializeField] private string sfxParameter = "SFXVolume";     // ตรงกับ Exposed Parameter ใน AudioMixer
-
-    [Header("Optional: Direct AudioSources (ถ้าไม่ได้ใช้ AudioMixer)")]
-    [SerializeField] private AudioSource bgmSource;
-    [SerializeField] private AudioSource sfxSource;
-
     public static float mouseSensitivity = 2f;
 
-    private const string MUSIC_KEY = "MusicVolume";
-    private const string SFX_KEY = "SFXVolume";
     private const string SENS_KEY = "MouseSensitivity";
 
-    private const float DEFAULT_MUSIC = 0.75f;
-    private const float DEFAULT_SFX = 0.75f;
-    private const float DEFAULT_SENS = 2f;
-
-    void Start()
+    private void Awake()
     {
-        // 1. โหลดค่าเดิมทั้งหมดจาก PlayerPrefs
-        float savedMusic = PlayerPrefs.GetFloat(MUSIC_KEY, DEFAULT_MUSIC);
-        float savedSfx = PlayerPrefs.GetFloat(SFX_KEY, DEFAULT_SFX);
-        float savedSens = PlayerPrefs.GetFloat(SENS_KEY, DEFAULT_SENS);
-
-        mouseSensitivity = savedSens;
-
-        // 2. ตั้งค่า Slider โดยไม่ให้ยิง Event ทับค่าตอนเริ่มฉาก และผูก Listener ให้ปรับได้ทั้งใน Main Menu และในเกม
         if (musicSlider != null)
         {
-            musicSlider.SetValueWithoutNotify(savedMusic);
-            musicSlider.onValueChanged.RemoveAllListeners();
-            musicSlider.onValueChanged.AddListener(SetMusicVolume);
+            musicSlider.onValueChanged.AddListener(OnMusicSliderChanged);
         }
 
         if (sfxSlider != null)
         {
-            sfxSlider.SetValueWithoutNotify(savedSfx);
-            sfxSlider.onValueChanged.RemoveAllListeners();
-            sfxSlider.onValueChanged.AddListener(SetSFXVolume);
+            sfxSlider.onValueChanged.AddListener(OnSfxSliderChanged);
         }
 
         if (mouseSensitivitySlider != null)
         {
-            mouseSensitivitySlider.SetValueWithoutNotify(savedSens);
-            mouseSensitivitySlider.onValueChanged.RemoveAllListeners();
             mouseSensitivitySlider.onValueChanged.AddListener(SetMouseSensitivity);
         }
-
-        // 3. นำค่าเสียงที่โหลดได้ไปใช้ทันทีตอนเริ่มฉาก
-        ApplyMusicVolume(savedMusic);
-        ApplySFXVolume(savedSfx);
     }
 
-    // เรียกได้ทั้งจาก Slider Listener หรือลากใส่ On Value Changed เอง
-    public void SetMusicVolume(float value)
+    private void OnEnable()
     {
-        ApplyMusicVolume(value);
-        PlayerPrefs.SetFloat(MUSIC_KEY, value);
-        PlayerPrefs.Save();
+        SyncUI();
     }
 
-    public void SetSFXVolume(float value)
+    private void Start()
     {
-        ApplySFXVolume(value);
-        PlayerPrefs.SetFloat(SFX_KEY, value);
-        PlayerPrefs.Save();
+        SyncUI();
     }
 
-    // ฟังก์ชันนี้ลากไปใส่ที่ช่อง On Value Changed ของ Slider ความไวเมาส์ได้เหมือนเดิม
+    private void SyncUI()
+    {
+        float savedSens = PlayerPrefs.GetFloat(SENS_KEY, 2f);
+        mouseSensitivity = savedSens;
+
+        if (mouseSensitivitySlider != null)
+        {
+            mouseSensitivitySlider.SetValueWithoutNotify(savedSens);
+        }
+
+        if (AudioManager.Instance != null)
+        {
+            if (musicSlider != null)
+            {
+                musicSlider.SetValueWithoutNotify(AudioManager.Instance.GetBGMVolume());
+            }
+
+            if (sfxSlider != null)
+            {
+                sfxSlider.SetValueWithoutNotify(AudioManager.Instance.GetSFXVolume());
+            }
+        }
+    }
+
+    public void OnMusicSliderChanged(float value)
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetBGMVolume(value);
+        }
+    }
+
+    public void OnSfxSliderChanged(float value)
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetSFXVolume(value);
+        }
+    }
+
+    // ฟังก์ชันนี้ให้ลากไปใส่ที่ช่อง On Value Changed ของ Slider ความไวเมาส์ได้ หรือให้โค้ดผูกอัตโนมัติใน Awake ก็ได้
     public void SetMouseSensitivity(float sensitivity)
     {
         mouseSensitivity = sensitivity;
         PlayerPrefs.SetFloat(SENS_KEY, sensitivity);
         PlayerPrefs.Save();
         Debug.Log("Mouse Sensitivity Updated: " + sensitivity);
-    }
-
-    private void ApplyMusicVolume(float sliderValue)
-    {
-        if (audioMixer != null)
-        {
-            float db = sliderValue <= 0.0001f ? -80f : Mathf.Log10(sliderValue) * 20f;
-            audioMixer.SetFloat(musicParameter, db);
-        }
-
-        if (bgmSource != null)
-        {
-            bgmSource.volume = sliderValue;
-        }
-    }
-
-    private void ApplySFXVolume(float sliderValue)
-    {
-        if (audioMixer != null)
-        {
-            float db = sliderValue <= 0.0001f ? -80f : Mathf.Log10(sliderValue) * 20f;
-            audioMixer.SetFloat(sfxParameter, db);
-        }
-
-        if (sfxSource != null)
-        {
-            sfxSource.volume = sliderValue;
-        }
     }
 }

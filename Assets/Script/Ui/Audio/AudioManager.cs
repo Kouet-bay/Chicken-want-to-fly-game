@@ -41,9 +41,6 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// เล่นเพลง BGM โดยกันเพลงซ้อน และเลือกได้ว่าจะให้เริ่มใหม่ตั้งแต่ต้น (forceRestart = true) หรือไม่
-    /// </summary>
     public void PlayBGM(AudioClip clip, bool forceRestart = false)
     {
         if (clip == null || bgmSource == null) return;
