@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -5,11 +6,20 @@ public class MainMenu : MonoBehaviour
 {
     [Header("UI Panels")]
     [SerializeField] private GameObject creditUi;
-    [SerializeField] private GameObject settingsUi; // หน้าต่าง Setting
+    [SerializeField] private GameObject settingsUi;
+
+    [Header("Start Game Delay")]
+    [SerializeField] private float startDelay = 0.15f;
 
     public void StartGame()
     {
-        SceneManager.LoadScene(1); // โหลดฉากเกม (Index 1)
+        StartCoroutine(StartGameRoutine());
+    }
+
+    private IEnumerator StartGameRoutine()
+    {
+        yield return new WaitForSeconds(startDelay);
+        SceneManager.LoadScene(1);
     }
 
     public void QuitGame()
@@ -18,7 +28,6 @@ public class MainMenu : MonoBehaviour
         Application.Quit();
     }
 
-    // เปิด-ปิดหน้าต่าง Credits
     public void ToggleCredit(bool isShow)
     {
         if (creditUi != null)
@@ -27,7 +36,6 @@ public class MainMenu : MonoBehaviour
         }
     }
 
-    // เปิด-ปิดหน้าต่าง Settings
     public void ToggleSettings(bool isShow)
     {
         if (settingsUi != null)

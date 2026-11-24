@@ -173,11 +173,11 @@ public class Player : MonoBehaviour, IDamageable
     {
         if (isGrounded)
         {
-            if (velocity.y < 0) velocity.y = -2f; 
+            if (velocity.y < -2f) velocity.y = -2f;
         }
         else
         {
-            if (velocity.y < 0) velocity.y += glideGravity * Time.deltaTime;
+            if (velocity.y < 0f) velocity.y += glideGravity * Time.deltaTime;
             else velocity.y += gravity * Time.deltaTime;
         }
     }

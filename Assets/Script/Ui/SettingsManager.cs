@@ -8,25 +8,84 @@ public class SettingsManager : MonoBehaviour
     [SerializeField] private Slider sfxSlider;
     [SerializeField] private Slider mouseSensitivitySlider;
 
-    public static float mouseSensitivity = 2f; 
+    public static float mouseSensitivity = 2f;
 
-    void Start()
+    private const string SENS_KEY = "MouseSensitivity";
+
+    private void Awake()
     {
-        // โหลดค่าที่เคยเซฟไว้
-        float defaultSens = PlayerPrefs.GetFloat("MouseSensitivity", 2f);
-        mouseSensitivity = defaultSens;
-        
+        if (musicSlider != null)
+        {
+            musicSlider.onValueChanged.AddListener(OnMusicSliderChanged);
+        }
+
+        if (sfxSlider != null)
+        {
+            sfxSlider.onValueChanged.AddListener(OnSfxSliderChanged);
+        }
+
         if (mouseSensitivitySlider != null)
         {
-            mouseSensitivitySlider.value = defaultSens;
+            mouseSensitivitySlider.onValueChanged.AddListener(SetMouseSensitivity);
         }
     }
 
-    // ฟังก์ชันนี้ให้ลากไปใส่ที่ช่อง On Value Changed ของ Slider ความไวเมาส์
+    private void OnEnable()
+    {
+        SyncUI();
+    }
+
+    private void Start()
+    {
+        SyncUI();
+    }
+
+    private void SyncUI()
+    {
+        float savedSens = PlayerPrefs.GetFloat(SENS_KEY, 2f);
+        mouseSensitivity = savedSens;
+
+        if (mouseSensitivitySlider != null)
+        {
+            mouseSensitivitySlider.SetValueWithoutNotify(savedSens);
+        }
+
+        if (AudioManager.Instance != null)
+        {
+            if (musicSlider != null)
+            {
+                musicSlider.SetValueWithoutNotify(AudioManager.Instance.GetBGMVolume());
+            }
+
+            if (sfxSlider != null)
+            {
+                sfxSlider.SetValueWithoutNotify(AudioManager.Instance.GetSFXVolume());
+            }
+        }
+    }
+
+    public void OnMusicSliderChanged(float value)
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetBGMVolume(value);
+        }
+    }
+
+    public void OnSfxSliderChanged(float value)
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetSFXVolume(value);
+        }
+    }
+
+    // ฟังก์ชันนี้ให้ลากไปใส่ที่ช่อง On Value Changed ของ Slider ความไวเมาส์ได้ หรือให้โค้ดผูกอัตโนมัติใน Awake ก็ได้
     public void SetMouseSensitivity(float sensitivity)
     {
         mouseSensitivity = sensitivity;
-        PlayerPrefs.SetFloat("MouseSensitivity", sensitivity);
+        PlayerPrefs.SetFloat(SENS_KEY, sensitivity);
+        PlayerPrefs.Save();
         Debug.Log("Mouse Sensitivity Updated: " + sensitivity);
     }
 }

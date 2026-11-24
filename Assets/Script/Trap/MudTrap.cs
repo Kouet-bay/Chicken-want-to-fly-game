@@ -1,29 +1,48 @@
+using System.Collections;
 using UnityEngine;
 
 public class MudTrap : MonoBehaviour
 {
     [Header("Mud Trap Settings")]
-    [Range(0.1f, 0.9f)] [SerializeField] private float speedMultiplier = 0.4f;   
-    [Range(0.1f, 0.9f)] [SerializeField] private float dashMultiplier = 0.5f;   
+    [Range(0.1f, 0.9f)] [SerializeField] private float speedMultiplier = 0.4f;
+    [Range(0.1f, 0.9f)] [SerializeField] private float dashMultiplier = 0.5f;
+    [SerializeField] private float exitGraceTime = 0.1f;
 
-    // ใช้ OnTriggerStay เพื่อให้ตรวจจับ CharacterController ได้ต่อเนื่องตอนที่ผู้เล่นยืนหรือเดินอยู่ในบ่อ
-    private void OnTriggerStay(Collider other)
+    private Coroutine exitRoutine;
+
+    private void OnTriggerEnter(Collider other)
     {
-        Player player = other.GetComponent<Player>();
-        if (player != null)
+        if (other.TryGetComponent(out Player player))
         {
-            Debug.Log("Player อยู่ในบ่อโคลน: " + other.name);
+            if (exitRoutine != null)
+            {
+                StopCoroutine(exitRoutine);
+                exitRoutine = null;
+            }
+
             player.EnterMud(speedMultiplier, dashMultiplier);
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        Player player = other.GetComponent<Player>();
+        if (other.TryGetComponent(out Player player))
+        {
+            if (exitRoutine != null)
+            {
+                StopCoroutine(exitRoutine);
+            }
+            exitRoutine = StartCoroutine(DelayedExit(player));
+        }
+    }
+
+    private IEnumerator DelayedExit(Player player)
+    {
+        yield return new WaitForSeconds(exitGraceTime);
         if (player != null)
         {
-            Debug.Log("Player ออกจากบ่อโคลนแล้ว");
             player.ExitMud();
         }
+        exitRoutine = null;
     }
 }
